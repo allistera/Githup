@@ -14,6 +14,7 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ResultMessage,
     TextBlock,
+    ToolUseBlock,
     query,
 )
 
@@ -45,6 +46,27 @@ class RepoResult:
     pr_url: str | None = None
     report: dict[str, str] = field(default_factory=dict)
     error: str | None = None
+
+
+def _tool_detail(tool_input: object) -> str:
+    """A short, human-readable summary of a tool call's key argument."""
+    if not isinstance(tool_input, dict):
+        return ""
+    for key in ("command", "file_path", "pattern", "path", "query", "url"):
+        val = tool_input.get(key)
+        if val:
+            first = str(val).strip().splitlines()[0] if str(val).strip() else ""
+            return first[:120]
+    return ""
+
+
+def _snippet(text: str, limit: int = 200) -> str:
+    """First non-empty line of ``text``, trimmed to ``limit`` characters."""
+    for line in text.splitlines():
+        line = line.strip()
+        if line:
+            return line[:limit] + ("…" if len(line) > limit else "")
+    return ""
 
 
 def _slug(repo: str) -> str:
@@ -136,8 +158,11 @@ async def run_worker(
     """Process a single repository end to end, bounded by ``semaphore``."""
     result = RepoResult(repo=repo)
     started = time.monotonic()
+    verbose = config.settings.verbose
 
     async with semaphore:
+        if verbose:
+            log(repo, "starting")
         try:
             repo_path = await clone_or_update(
                 repo, config.work_dir_path, config.settings.reuse_clones
@@ -177,6 +202,11 @@ async def run_worker(
                     for block in message.content:
                         if isinstance(block, TextBlock) and block.text.strip():
                             last_text = block.text
+                            if verbose and (s := _snippet(block.text)):
+                                log(repo, s)
+                        elif isinstance(block, ToolUseBlock) and verbose:
+                            detail = _tool_detail(block.input)
+                            log(repo, f"{block.name}: {detail}" if detail else block.name)
                 elif isinstance(message, ResultMessage):
                     result.cost_usd = message.total_cost_usd or 0.0
                     result.num_turns = message.num_turns or 0
@@ -198,6 +228,9 @@ async def run_worker(
         result.pr_url = _extract_pr_url(result.report)
 
     result.duration_s = time.monotonic() - started
-    if result.status not in ("success", "partial"):
+    if verbose:
+        log(repo, f"done: {result.status} (${result.cost_usd:.2f}, "
+                  f"{result.duration_s:.0f}s, {result.num_turns} turns)")
+    elif result.status not in ("success", "partial"):
         log(repo, result.status)
     return result

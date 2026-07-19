@@ -59,6 +59,11 @@ class Settings:
     # empty. Off by default so clones can be inspected/reused; enable per-run.
     cleanup: bool = False
 
+    # Stream a detailed play-by-play of what each worker is doing: every tool
+    # call (with its key argument), the agent's narration, and a per-repo
+    # start/finish line. Off by default to keep the output clean.
+    verbose: bool = False
+
 
 @dataclass
 class Config:

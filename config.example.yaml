@@ -40,3 +40,7 @@ settings:
   # Delete every cloned repo once the run finishes. Only the clones this run
   # manages are removed (plus the work dir if it ends up empty).
   cleanup: false
+
+  # Stream a detailed play-by-play (every tool call, the agent's narration,
+  # per-repo timing). Handy for debugging; noisy for normal runs. Also -v/--verbose.
+  verbose: false

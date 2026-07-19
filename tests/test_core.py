@@ -16,6 +16,8 @@ from github_update.worker import (
     _extract_pr_url,
     _parse_report,
     _slug,
+    _snippet,
+    _tool_detail,
     cleanup_clones,
 )
 
@@ -126,6 +128,36 @@ def test_log_line_is_bulleted(capsys):
     err = capsys.readouterr().err.strip()
     assert err == "* allistera/Cookie-Web - Cloned and Checked"
     assert err.startswith("* ")
+
+
+# --- verbose helpers -------------------------------------------------------
+
+@pytest.mark.parametrize("tool_input,expected", [
+    ({"command": "npm update\nnpm run build"}, "npm update"),   # first line only
+    ({"file_path": "package.json"}, "package.json"),
+    ({"pattern": "TODO"}, "TODO"),
+    ({}, ""),
+    ("not-a-dict", ""),
+    ({"command": "x" * 200}, "x" * 120),                          # trimmed to 120
+])
+def test_tool_detail(tool_input, expected):
+    assert _tool_detail(tool_input) == expected
+
+
+def test_snippet_first_nonempty_line_and_trim():
+    assert _snippet("\n\n  hello world  \nsecond") == "hello world"
+    assert _snippet("") == ""
+    long = "a" * 250
+    out = _snippet(long, limit=200)
+    assert out == "a" * 200 + "…"
+
+
+def test_verbose_flag_wiring():
+    from github_update.cli import _config_from_args, build_parser
+    a = build_parser().parse_args(["-v", "-r", "x/y"])
+    assert _config_from_args(a).settings.verbose is True
+    b = build_parser().parse_args(["-r", "x/y"])
+    assert _config_from_args(b).settings.verbose is False
 
 
 # --- clone cleanup ---------------------------------------------------------
