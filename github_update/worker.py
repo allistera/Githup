@@ -97,6 +97,16 @@ def _parse_report(text: str) -> dict[str, str]:
     return report
 
 
+def _extract_pr_url(report: dict[str, str]) -> str | None:
+    """Return the PR URL from a report, or None.
+
+    Only a value that actually looks like a URL counts; the agent writes
+    things like "none" or "none (dry run)" when there is no PR.
+    """
+    pr = report.get("PULL_REQUEST", "").strip()
+    return pr if pr.startswith("http") else None
+
+
 async def run_worker(
     repo: str,
     config: Config,
@@ -168,11 +178,7 @@ async def run_worker(
         result.report = _parse_report(last_text)
         if result.status not in ("failed", "error"):
             result.status = result.report.get("STATUS", "success").lower()
-        pr = result.report.get("PULL_REQUEST", "").strip()
-        # Only treat it as a real PR if it actually looks like a URL; the agent
-        # writes things like "none (dry run)" otherwise.
-        if pr.startswith("http"):
-            result.pr_url = pr
+        result.pr_url = _extract_pr_url(result.report)
 
     result.duration_s = time.monotonic() - started
     log(repo, f"done: {result.status} (${result.cost_usd:.2f}, {result.duration_s:.0f}s)")

@@ -18,3 +18,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["github_update"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
