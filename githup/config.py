@@ -1,4 +1,4 @@
-"""Configuration loading for github-update.
+"""Configuration loading for Githup.
 
 A run is described by a YAML file (see ``config.example.yaml``). Anything not
 set there falls back to the defaults below, and a handful of settings can be

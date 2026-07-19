@@ -1,6 +1,6 @@
-# github-update configuration
+# Githup configuration
 #
-# Copy this to config.yaml and edit. Run with:  uv run github-update
+# Copy this to config.yaml and edit. Run with:  uv run githup
 
 # The repositories to process. Use "owner/name" (recommended) or a full URL.
 repos:

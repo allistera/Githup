@@ -1,4 +1,4 @@
-# github-update
+# Githup
 
 Spin up a pool of [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview)
 workers that fan out across your GitHub repositories. Each worker:
@@ -55,7 +55,7 @@ rather than failing.
 ## Setup
 
 ```bash
-cd github-update
+cd githup
 uv sync                       # install dependencies
 cp config.example.yaml config.yaml
 vim config.yaml              # list your repos
@@ -66,18 +66,18 @@ vim config.yaml              # list your repos
 Start with a **dry run** — it analyses and reports but changes nothing:
 
 ```bash
-uv run github-update --dry-run
+uv run githup --dry-run
 ```
 
 Various options:
 
 ```bash
-uv run github-update                              # use config.yaml
-uv run github-update -j 5                         # 5 workers in parallel, ignore config parallel
-uv run github-update --repo allistera/monzo-mcp   # ad-hoc, ignore config list
-uv run github-update --branch chore/deps-2026     # override the work branch
-uv run github-update --model claude-sonnet-5
-uv run github-update -v                            # verbose play-by-play
+uv run githup                              # use config.yaml
+uv run githup -j 5                         # 5 workers in parallel, ignore config parallel
+uv run githup --repo allistera/monzo-mcp   # ad-hoc, ignore config list
+uv run githup --branch chore/deps-2026     # override the work branch
+uv run githup --model claude-sonnet-5
+uv run githup -v                            # verbose play-by-play
 ```
 
 ### Options

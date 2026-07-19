@@ -174,7 +174,7 @@ async def run_worker(
             log(repo, f"clone failed: {exc}")
             return result
 
-        log(repo, "Cloned and Checked")
+        log(repo, "Cloned, runnning agent...")
 
         options = ClaudeAgentOptions(
             cwd=str(repo_path),
@@ -228,6 +228,8 @@ async def run_worker(
         result.pr_url = _extract_pr_url(result.report)
 
     result.duration_s = time.monotonic() - started
+    log(repo, "finished in {:.0f}s".format(result.duration_s))
+
     if verbose:
         log(repo, f"done: {result.status} (${result.cost_usd:.2f}, "
                   f"{result.duration_s:.0f}s, {result.num_turns} turns)")

@@ -53,7 +53,10 @@ open a pull request. Instead, investigate and report what you *would* do:
             "6. Push the work branch and open a pull request against "
             f"{base_desc} using `gh pr create`. Give it a clear title and a body "
             "that lists what was updated and which Dependabot alerts were "
-            "addressed."
+            "addressed. End the PR body with exactly this final line and nothing "
+            "after it:\n\n\U0001f916 Generated with Githup\n\n"
+            "Do NOT add any other attribution, co-author trailer, or a "
+            "'Generated with Claude Code' line to the PR body or the commits."
             if settings.open_pr
             else "6. Do NOT push or open a pull request; leave the commit on the "
             "local work branch only."

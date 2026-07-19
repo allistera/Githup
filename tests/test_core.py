@@ -1,4 +1,4 @@
-"""Deterministic unit tests for github-update's pure logic.
+"""Deterministic unit tests for Githup's pure logic.
 
 The agent-driven worker itself is exercised end-to-end with `--dry-run`
 against a real repo; these tests cover the parsing/config/summary logic that
@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from github_update.config import Config, Settings, load_config
-from github_update.orchestrator import _log, summarise
-from github_update.worker import (
+from githup.config import Config, Settings, load_config
+from githup.orchestrator import _log, summarise
+from githup.worker import (
     RepoResult,
     _extract_pr_url,
     _parse_report,
@@ -153,7 +153,7 @@ def test_snippet_first_nonempty_line_and_trim():
 
 
 def test_verbose_flag_wiring():
-    from github_update.cli import _config_from_args, build_parser
+    from githup.cli import _config_from_args, build_parser
     a = build_parser().parse_args(["-v", "-r", "x/y"])
     assert _config_from_args(a).settings.verbose is True
     b = build_parser().parse_args(["-r", "x/y"])
@@ -161,7 +161,7 @@ def test_verbose_flag_wiring():
 
 
 def test_branch_flag_overrides_work_branch():
-    from github_update.cli import _config_from_args, build_parser
+    from githup.cli import _config_from_args, build_parser
     a = build_parser().parse_args(["--branch", "chore/deps-2026", "-r", "x/y"])
     assert _config_from_args(a).settings.work_branch == "chore/deps-2026"
     # Absent -> keeps the default work_branch.
@@ -170,9 +170,27 @@ def test_branch_flag_overrides_work_branch():
 
 
 def test_no_pr_flag_removed():
-    from github_update.cli import build_parser
+    from githup.cli import build_parser
     with pytest.raises(SystemExit):
         build_parser().parse_args(["--no-pr", "-r", "x/y"])
+
+
+# --- PR body footer --------------------------------------------------------
+
+def test_pr_prompt_uses_githup_footer():
+    from githup.prompts import build_task_prompt
+    s = Settings(open_pr=True, dry_run=False)
+    prompt = build_task_prompt("a/b", s.work_branch, None, s)
+    assert "\U0001f916 Generated with Githup" in prompt
+    # And it explicitly forbids other attribution / the Claude Code line.
+    assert "Do NOT add any other attribution" in prompt
+
+
+def test_dry_run_prompt_has_no_pr_footer():
+    from githup.prompts import build_task_prompt
+    s = Settings(dry_run=True)
+    prompt = build_task_prompt("a/b", s.work_branch, None, s)
+    assert "Generated with Githup" not in prompt
 
 
 # --- clone cleanup ---------------------------------------------------------

@@ -21,7 +21,7 @@ def _check_prerequisites() -> list[str]:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        prog="github-update",
+        prog="githup",
         description="Spin up Claude Agent SDK workers to update dependencies and "
         "fix Dependabot alerts across your GitHub repositories.",
     )
