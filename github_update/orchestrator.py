@@ -14,7 +14,7 @@ _print_lock = threading.Lock()
 
 def _log(repo: str, msg: str) -> None:
     with _print_lock:
-        print(f"[{repo}] {msg}", file=sys.stderr, flush=True)
+        print(f"* {repo} - {msg}", file=sys.stderr, flush=True)
 
 
 def _note(msg: str) -> None:

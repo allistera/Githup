@@ -149,7 +149,7 @@ async def run_worker(
             log(repo, f"clone failed: {exc}")
             return result
 
-        log(repo, "Cloned")
+        log(repo, "Cloned and Checked")
 
         options = ClaudeAgentOptions(
             cwd=str(repo_path),

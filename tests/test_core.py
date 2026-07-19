@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from github_update.config import Config, Settings, load_config
-from github_update.orchestrator import summarise
+from github_update.orchestrator import _log, summarise
 from github_update.worker import (
     RepoResult,
     _extract_pr_url,
@@ -117,6 +117,15 @@ def test_summary_flags_absent_when_no_work():
     # PR present but neither flag set -> no checkmark anywhere.
     assert "https://github.com/a/real/pull/1" in out
     assert "✓" not in out
+
+
+# --- per-repo log line -----------------------------------------------------
+
+def test_log_line_is_bulleted(capsys):
+    _log("allistera/Cookie-Web", "Cloned and Checked")
+    err = capsys.readouterr().err.strip()
+    assert err == "* allistera/Cookie-Web - Cloned and Checked"
+    assert err.startswith("* ")
 
 
 # --- clone cleanup ---------------------------------------------------------
