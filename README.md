@@ -37,7 +37,7 @@ your global or project `CLAUDE.md` — each runs in a clean, predictable context
 
 - **Python 3.12+** and [`uv`](https://docs.astral.sh/uv/).
 - **Claude Code CLI** on your `PATH` and authenticated (`claude`). The SDK drives it.
-- **`gh` (GitHub CLI)** authenticated: `gh auth status`.
+- **`gh` (GitHub CLI)** authenticated and configured: `gh auth refresh -s security_events`.
 - **`git`**.
 
 ### Dependabot alert access
@@ -58,7 +58,7 @@ rather than failing.
 cd github-update
 uv sync                       # install dependencies
 cp config.example.yaml config.yaml
-$EDITOR config.yaml           # list your repos
+vim config.yaml              # list your repos
 ```
 
 ## Usage
@@ -69,14 +69,15 @@ Start with a **dry run** — it analyses and reports but changes nothing:
 uv run github-update --dry-run
 ```
 
-Then a real run:
+Various options:
 
 ```bash
 uv run github-update                              # use config.yaml
-uv run github-update -j 5                         # 5 workers in parallel
+uv run github-update -j 5                         # 5 workers in parallel, ignore config parallel
 uv run github-update --repo allistera/monzo-mcp   # ad-hoc, ignore config list
-uv run github-update --no-pr                      # commit locally, don't push/PR
+uv run github-update --branch chore/deps-2026     # override the work branch
 uv run github-update --model claude-sonnet-5
+uv run github-update -v                            # verbose play-by-play
 ```
 
 ### Options
@@ -88,14 +89,17 @@ uv run github-update --model claude-sonnet-5
 | `-j, --concurrency N` | Number of workers in parallel. |
 | `--model NAME` | Model for every worker. |
 | `--dry-run` | Analyse and report only. No changes, commits, or PRs. |
-| `--no-pr` | Commit to the work branch locally; don't push or open a PR. |
+| `--branch NAME` | Branch each worker creates its changes on (overrides `work_branch`). |
 | `--work-dir DIR` | Where repos are cloned. |
+| `--cleanup / --no-cleanup` | Delete (or keep) the cloned repos when the run finishes. |
+| `-v, --verbose` | Detailed play-by-play: every tool call, agent narration, per-repo timing. |
 
 ## Configuration
 
 See [`config.example.yaml`](./config.example.yaml). Everything under `settings:`
-is optional and falls back to sensible defaults; `--dry-run`, `--no-pr`,
-`--concurrency`, `--model`, and `--work-dir` can override the file at runtime.
+is optional and falls back to sensible defaults; `--dry-run`, `--branch`,
+`--concurrency`, `--model`, `--work-dir`, `--cleanup`, and `--verbose` can
+override the file at runtime.
 
 Key knobs: `concurrency`, `work_branch`, `base_branch`, `open_pr`, `dry_run`,
 `max_turns`, and `max_budget_usd` (a per-worker spend ceiling, default $2).

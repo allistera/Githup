@@ -160,6 +160,21 @@ def test_verbose_flag_wiring():
     assert _config_from_args(b).settings.verbose is False
 
 
+def test_branch_flag_overrides_work_branch():
+    from github_update.cli import _config_from_args, build_parser
+    a = build_parser().parse_args(["--branch", "chore/deps-2026", "-r", "x/y"])
+    assert _config_from_args(a).settings.work_branch == "chore/deps-2026"
+    # Absent -> keeps the default work_branch.
+    b = build_parser().parse_args(["-r", "x/y"])
+    assert _config_from_args(b).settings.work_branch == "chore/dependency-updates"
+
+
+def test_no_pr_flag_removed():
+    from github_update.cli import build_parser
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["--no-pr", "-r", "x/y"])
+
+
 # --- clone cleanup ---------------------------------------------------------
 
 def test_cleanup_removes_only_managed_clones(tmp_path):
