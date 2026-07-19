@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from githup.config import Config, Settings, load_config
+from githup.config import Settings, load_config
 from githup.orchestrator import _log, summarise
 from githup.worker import (
     RepoResult,
