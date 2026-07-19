@@ -27,6 +27,10 @@ settings:
   # Open a pull request at the end of a successful run.
   open_pr: true
 
+  # After opening a PR, wait for its CI checks and fix failures until they pass
+  # (or the worker runs out of budget). Set false to open the PR and not wait.
+  checks_pass: true
+
   # Analyse and report only — no changes, commits, or PRs. Great for a first pass.
   dry_run: false
 

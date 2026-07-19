@@ -41,6 +41,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--cleanup", action=argparse.BooleanOptionalAction, default=None,
                    help="Delete all cloned repos when the run finishes "
                    "(use --no-cleanup to keep them). Overrides the config.")
+    p.add_argument("--checks", dest="checks_pass",
+                   action=argparse.BooleanOptionalAction, default=None,
+                   help="After opening a PR, wait for CI checks and fix failures "
+                   "(use --no-checks to skip waiting). Overrides the config.")
     p.add_argument("-v", "--verbose", action="store_true",
                    help="Print a detailed play-by-play of each worker: every "
                    "tool call, the agent's narration, and per-repo timing.")
@@ -66,6 +70,8 @@ def _config_from_args(args: argparse.Namespace) -> Config:
         s.work_dir = args.work_dir
     if args.cleanup is not None:
         s.cleanup = args.cleanup
+    if args.checks_pass is not None:
+        s.checks_pass = args.checks_pass
     if args.verbose:
         s.verbose = True
     return config

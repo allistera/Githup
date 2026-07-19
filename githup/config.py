@@ -41,6 +41,11 @@ class Settings:
     # the worker still commits to the work branch locally but pushes nothing.
     open_pr: bool = True
 
+    # After opening a PR, wait for its CI checks and fix failures until they
+    # pass (or the worker runs out of budget). When false, the PR is opened and
+    # left as-is without waiting on checks. Only relevant when open_pr is true.
+    checks_pass: bool = True
+
     # When true, workers analyse and report but make no changes, no commits, no
     # pushes, and no PRs. Use this for a first, read-only pass.
     dry_run: bool = False

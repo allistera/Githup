@@ -212,6 +212,28 @@ def test_dry_run_prompt_does_not_wait_for_checks():
     assert "gh pr checks" not in prompt
 
 
+def test_checks_pass_defaults_true():
+    assert Settings().checks_pass is True
+
+
+def test_checks_pass_false_drops_wait_step_but_keeps_pr():
+    from githup.prompts import build_task_prompt
+    s = Settings(open_pr=True, checks_pass=False, dry_run=False)
+    prompt = build_task_prompt("a/b", s.work_branch, None, s)
+    assert "gh pr checks" not in prompt          # no wait-for-checks step
+    assert "\U0001f916 Generated with Githup" in prompt  # PR still opened
+
+
+def test_checks_flag_wiring():
+    from githup.cli import _config_from_args, build_parser
+    on = build_parser().parse_args(["--checks", "-r", "x/y"])
+    assert _config_from_args(on).settings.checks_pass is True
+    off = build_parser().parse_args(["--no-checks", "-r", "x/y"])
+    assert _config_from_args(off).settings.checks_pass is False
+    default = build_parser().parse_args(["-r", "x/y"])
+    assert _config_from_args(default).settings.checks_pass is True
+
+
 def test_parse_report_captures_checks():
     report = _parse_report("STATUS: success\nCHECKS: passed\n")
     assert report["CHECKS"] == "passed"
