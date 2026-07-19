@@ -32,6 +32,7 @@ _REPORT_KEYS = (
     "DEPENDABOT_ALERTS_FIXED",
     "DEPENDABOT_ALERTS_UNFIXED",
     "PULL_REQUEST",
+    "CHECKS",
     "NOTES",
 )
 
@@ -174,7 +175,7 @@ async def run_worker(
             log(repo, f"clone failed: {exc}")
             return result
 
-        log(repo, "Cloned, runnning agent...")
+        log(repo, "Cloned, running agent...")
 
         options = ClaudeAgentOptions(
             cwd=str(repo_path),

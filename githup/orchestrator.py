@@ -42,6 +42,7 @@ async def run_all(config: Config) -> list[RepoResult]:
 
 
 _CHECK = "✓"
+_CROSS = "✗"
 
 
 def _is_affirmative(val: str | None) -> bool:
@@ -51,22 +52,33 @@ def _is_affirmative(val: str | None) -> bool:
     return val.strip().lower() not in ("", "none", "0", "no", "n/a")
 
 
+def _checks_cell(val: str | None) -> str:
+    """✓ when CI checks passed, ✗ when they failed/unresolved, else blank."""
+    v = (val or "").strip().lower()
+    if v == "passed":
+        return _CHECK
+    if v in ("failed", "unresolved"):
+        return _CROSS
+    return ""
+
+
 def summarise(results: list[RepoResult]) -> str:
     """Render a table of repos that opened a pull request.
 
     Only repos with a real PR appear. Columns: Repository, Package Update,
-    Security Fix, URL — the first two flagged with a checkmark when true.
+    Security Fix, Checks, URL — the flag columns marked ✓/✗ as appropriate.
     """
     pr_results = [r for r in results if r.pr_url]
 
     lines: list[str] = [""]
     if pr_results:
-        headers = ("Repository", "Package Update", "Security Fix", "URL")
+        headers = ("Repository", "Package Update", "Security Fix", "Checks", "URL")
         rows = [
             (
                 r.repo,
                 _CHECK if _is_affirmative(r.report.get("DEPENDENCIES_UPDATED")) else "",
                 _CHECK if _is_affirmative(r.report.get("DEPENDABOT_ALERTS_FIXED")) else "",
+                _checks_cell(r.report.get("CHECKS")),
                 r.pr_url or "",
             )
             for r in pr_results
@@ -76,10 +88,12 @@ def summarise(results: list[RepoResult]) -> str:
         for row in rows:
             widths = [max(w, len(cell)) for w, cell in zip(widths, row)]
 
+        flag_cols = (1, 2, 3)
+
         def _fmt(cells: tuple[str, ...]) -> str:
-            # Repository/URL left-aligned; the two flag columns centred.
+            # Repository/URL left-aligned; the flag columns centred.
             out = [
-                cell.center(widths[i]) if i in (1, 2) else cell.ljust(widths[i])
+                cell.center(widths[i]) if i in flag_cols else cell.ljust(widths[i])
                 for i, cell in enumerate(cells)
             ]
             return "  ".join(out).rstrip()

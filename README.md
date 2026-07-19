@@ -8,6 +8,8 @@ workers that fan out across your GitHub repositories. Each worker:
 3. **Updates all dependencies** to their latest compatible versions (and lockfiles).
 4. **Checks GitHub Dependabot alerts** for the repo and **fixes** the ones it can.
 5. Opens a **pull request** with the result (never merges, never touches `main`).
+6. **Waits for the PR's CI checks** and, if any fail, diagnoses and fixes the
+   cause, pushing until they pass (or reports it couldn't within its budget).
 
 Because each worker is a full Claude agent, it adapts to the repo in front of it —
 npm / pnpm / yarn, uv / pip / poetry, cargo, go modules, bundler, composer,
@@ -106,18 +108,21 @@ Key knobs: `concurrency`, `work_branch`, `base_branch`, `open_pr`, `dry_run`,
 
 ## Output
 
-Progress is streamed per repo to stderr while workers run. At the end a summary
-lists each repo's status, cost, what was updated, which alerts were fixed, and
-any pull-request URLs. Example (dry run):
+Progress is streamed per repo to stderr as a bulleted list while workers run
+(`-v` adds a full play-by-play). At the end, a table lists only the repos that
+opened a pull request — flagging whether dependencies were updated, Dependabot
+alerts were fixed, and CI checks passed (✓) or failed (✗):
 
 ```
-allistera/monzo-mcp                           success   $  0.94     82s
-    dependencies_updated: Would update 2: typescript-eslint 8.63→8.64, typescript 6.0.3→7.0.2 (major)
-    dependabot_alerts_fixed: 0
-    dependabot_alerts_unfixed: none (0 open)
-------------------------------------------------------------------------
-1 repo(s): success=1
-total cost: $0.94
+* allistera/Cookie-Web - Cloned, running agent...
+* allistera/monzo-mcp - Cloned, running agent...
+
+Repository            Package Update  Security Fix  Checks  URL
+--------------------  --------------  ------------  ------  -----------------------------------------------
+allistera/Cookie-Web        ✓              ✓          ✓     https://github.com/allistera/Cookie-Web/pull/41
+allistera/monzo-mcp         ✓                         ✗     https://github.com/allistera/monzo-mcp/pull/7
+
+2 pull request(s) · total cost: $3.60
 ```
 
 ## Safety

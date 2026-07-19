@@ -193,6 +193,47 @@ def test_dry_run_prompt_has_no_pr_footer():
     assert "Generated with Githup" not in prompt
 
 
+# --- wait-for-checks behaviour ---------------------------------------------
+
+def test_pr_prompt_waits_for_and_fixes_checks():
+    from githup.prompts import build_task_prompt
+    s = Settings(open_pr=True, dry_run=False)
+    prompt = build_task_prompt("a/b", s.work_branch, None, s)
+    assert "gh pr checks" in prompt and "--watch" in prompt
+    # It must instruct fixing failures and rechecking, and report CHECKS.
+    assert "FAILS" in prompt or "fails" in prompt
+    assert "CHECKS:" in prompt
+
+
+def test_dry_run_prompt_does_not_wait_for_checks():
+    from githup.prompts import build_task_prompt
+    s = Settings(dry_run=True)
+    prompt = build_task_prompt("a/b", s.work_branch, None, s)
+    assert "gh pr checks" not in prompt
+
+
+def test_parse_report_captures_checks():
+    report = _parse_report("STATUS: success\nCHECKS: passed\n")
+    assert report["CHECKS"] == "passed"
+
+
+def test_summary_checks_column():
+    from githup.worker import _extract_pr_url
+
+    def mk(name, checks):
+        r = RepoResult(repo=name, status="success", cost_usd=1.0)
+        r.report = {"PULL_REQUEST": f"https://github.com/{name}/pull/1",
+                    "CHECKS": checks}
+        r.pr_url = _extract_pr_url(r.report)
+        return r
+
+    out = summarise([mk("a/pass", "passed"), mk("a/fail", "failed"),
+                     mk("a/none", "none")])
+    assert "Checks" in out          # header present
+    assert "✓" in out               # a/pass
+    assert "✗" in out               # a/fail
+
+
 # --- clone cleanup ---------------------------------------------------------
 
 def test_cleanup_removes_only_managed_clones(tmp_path):

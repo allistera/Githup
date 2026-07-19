@@ -56,7 +56,23 @@ open a pull request. Instead, investigate and report what you *would* do:
             "addressed. End the PR body with exactly this final line and nothing "
             "after it:\n\n\U0001f916 Generated with Githup\n\n"
             "Do NOT add any other attribution, co-author trailer, or a "
-            "'Generated with Claude Code' line to the PR body or the commits."
+            "'Generated with Claude Code' line to the PR body or the commits.\n\n"
+            "7. After the PR is open, WAIT for its CI checks to finish and make "
+            "them pass:\n"
+            "   - Wait with `gh pr checks <pr-url> --watch` (it blocks until every "
+            "check completes). If the repo has no checks configured, gh reports "
+            "that immediately — treat that as passing and move on.\n"
+            "   - If all checks pass, you are done.\n"
+            "   - If any check FAILS, read the failure logs (e.g. "
+            "`gh run view <run-id> --log-failed`), diagnose the root cause, and "
+            "fix it with the smallest change — usually pinning or rolling back "
+            "the specific dependency update that broke the build, or correcting a "
+            "lockfile. Commit and push to the SAME work branch, then wait for the "
+            "checks again.\n"
+            "   - Repeat this fix-and-recheck loop until the checks pass or you "
+            "run low on turns/budget. If you cannot get them green in time, set "
+            "STATUS to 'partial', record the failing check and why in the report, "
+            "and leave the PR open. Never merge the PR and never force-push."
             if settings.open_pr
             else "6. Do NOT push or open a pull request; leave the commit on the "
             "local work branch only."
@@ -111,5 +127,6 @@ DEPENDENCIES_UPDATED: <count or short summary>
 DEPENDABOT_ALERTS_FIXED: <count>
 DEPENDABOT_ALERTS_UNFIXED: <count and one-line reason each, or none>
 PULL_REQUEST: <url, or "none">
+CHECKS: <passed | failed | none | not applicable>
 NOTES: <anything important, or none>
 """
