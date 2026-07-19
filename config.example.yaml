@@ -1,0 +1,38 @@
+# github-update configuration
+#
+# Copy this to config.yaml and edit. Run with:  uv run github-update
+
+# The repositories to process. Use "owner/name" (recommended) or a full URL.
+repos:
+  - allistera/Cookie-Web
+  - allistera/some-other-project
+  # - https://github.com/allistera/yet-another.git
+
+settings:
+  # Number of repos processed in parallel. Each is a separate Claude worker.
+  concurrency: 3
+
+  # Where repos are cloned (one subfolder each). Safe, throwaway location.
+  work_dir: work_repos
+
+  # Model for every worker. Omit / null to use the CLI default.
+  # model: claude-sonnet-5
+
+  # Base branch for the work. null = each repo's default branch.
+  base_branch: null
+
+  # Branch each worker creates its changes on.
+  work_branch: chore/dependency-updates
+
+  # Open a pull request at the end of a successful run.
+  open_pr: true
+
+  # Analyse and report only — no changes, commits, or PRs. Great for a first pass.
+  dry_run: false
+
+  # Safety caps per worker.
+  max_turns: 60
+  max_budget_usd: 2.0
+
+  # Freshen an existing clone instead of re-cloning it.
+  reuse_clones: true
