@@ -23,3 +23,7 @@ packages = ["github_update"]
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+# Only our own tests; work_repos/ holds throwaway clones with their own suites.
+testpaths = ["tests"]

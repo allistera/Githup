@@ -14,7 +14,6 @@ from claude_agent_sdk import (
     ClaudeAgentOptions,
     ResultMessage,
     TextBlock,
-    ToolUseBlock,
     query,
 )
 
@@ -118,7 +117,6 @@ async def run_worker(
     started = time.monotonic()
 
     async with semaphore:
-        log(repo, "starting")
         try:
             repo_path = await clone_or_update(
                 repo, config.work_dir_path, config.settings.reuse_clones
@@ -130,7 +128,7 @@ async def run_worker(
             log(repo, f"clone failed: {exc}")
             return result
 
-        log(repo, f"cloned -> {repo_path}")
+        log(repo, "Cloned")
 
         options = ClaudeAgentOptions(
             cwd=str(repo_path),
@@ -158,8 +156,6 @@ async def run_worker(
                     for block in message.content:
                         if isinstance(block, TextBlock) and block.text.strip():
                             last_text = block.text
-                        elif isinstance(block, ToolUseBlock):
-                            log(repo, f"tool: {block.name}")
                 elif isinstance(message, ResultMessage):
                     result.cost_usd = message.total_cost_usd or 0.0
                     result.num_turns = message.num_turns or 0
@@ -181,5 +177,6 @@ async def run_worker(
         result.pr_url = _extract_pr_url(result.report)
 
     result.duration_s = time.monotonic() - started
-    log(repo, f"done: {result.status} (${result.cost_usd:.2f}, {result.duration_s:.0f}s)")
+    if result.status not in ("success", "partial"):
+        log(repo, result.status)
     return result

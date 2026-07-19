@@ -73,14 +73,44 @@ def test_summary_lists_only_real_prs():
     dry.report = {"PULL_REQUEST": "none (dry run)"}
     dry.pr_url = _extract_pr_url(dry.report)
     real = RepoResult(repo="a/real", status="success", cost_usd=1.0)
-    real.report = {"PULL_REQUEST": "https://github.com/a/real/pull/3"}
+    real.report = {
+        "DEPENDENCIES_UPDATED": "12 packages",
+        "DEPENDABOT_ALERTS_FIXED": "2",
+        "PULL_REQUEST": "https://github.com/a/real/pull/3",
+    }
     real.pr_url = _extract_pr_url(real.report)
 
     out = summarise([dry, real])
-    pr_section = out.split("pull requests:")[-1]
-    assert "https://github.com/a/real/pull/3" in pr_section
-    assert "none (dry run)" not in pr_section
+    # Only the repo with a real PR is tabulated.
+    assert "https://github.com/a/real/pull/3" in out
+    assert "a/dry" not in out
+    # Header and both affirmative flags rendered.
+    assert "Repository" in out and "Package Update" in out and "Security Fix" in out
+    assert "✓" in out
+    assert "1 pull request(s)" in out
     assert "total cost: $1.50" in out
+
+
+def test_summary_no_prs_is_clean():
+    r = RepoResult(repo="a/none", status="success", cost_usd=0.25)
+    r.report = {"PULL_REQUEST": "none"}
+    out = summarise([r])
+    assert "No pull requests were opened." in out
+    assert "0 pull request(s)" in out
+
+
+def test_summary_flags_absent_when_no_work():
+    r = RepoResult(repo="a/real", status="success", cost_usd=1.0)
+    r.report = {
+        "DEPENDENCIES_UPDATED": "none",
+        "DEPENDABOT_ALERTS_FIXED": "0",
+        "PULL_REQUEST": "https://github.com/a/real/pull/1",
+    }
+    r.pr_url = _extract_pr_url(r.report)
+    out = summarise([r])
+    # PR present but neither flag set -> no checkmark anywhere.
+    assert "https://github.com/a/real/pull/1" in out
+    assert "✓" not in out
 
 
 # --- config loading --------------------------------------------------------
