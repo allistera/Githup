@@ -37,6 +37,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-pr", action="store_true",
                    help="Commit locally but do not push or open pull requests.")
     p.add_argument("--work-dir", help="Directory to clone repos into.")
+    p.add_argument("--cleanup", action=argparse.BooleanOptionalAction, default=None,
+                   help="Delete all cloned repos when the run finishes "
+                   "(use --no-cleanup to keep them). Overrides the config.")
     return p
 
 
@@ -57,6 +60,8 @@ def _config_from_args(args: argparse.Namespace) -> Config:
         s.open_pr = False
     if args.work_dir:
         s.work_dir = args.work_dir
+    if args.cleanup is not None:
+        s.cleanup = args.cleanup
     return config
 
 

@@ -54,6 +54,11 @@ class Settings:
     # Freshen an existing clone instead of re-cloning when the directory exists.
     reuse_clones: bool = True
 
+    # Delete every repo's clone once the whole run has finished. Only the clone
+    # directories this run manages are removed, plus the work dir if it ends up
+    # empty. Off by default so clones can be inspected/reused; enable per-run.
+    cleanup: bool = False
+
 
 @dataclass
 class Config:

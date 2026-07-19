@@ -7,7 +7,7 @@ import sys
 import threading
 
 from .config import Config
-from .worker import RepoResult, run_worker
+from .worker import RepoResult, cleanup_clones, run_worker
 
 _print_lock = threading.Lock()
 
@@ -15,6 +15,11 @@ _print_lock = threading.Lock()
 def _log(repo: str, msg: str) -> None:
     with _print_lock:
         print(f"[{repo}] {msg}", file=sys.stderr, flush=True)
+
+
+def _note(msg: str) -> None:
+    with _print_lock:
+        print(msg, file=sys.stderr, flush=True)
 
 
 async def run_all(config: Config) -> list[RepoResult]:
@@ -26,7 +31,14 @@ async def run_all(config: Config) -> list[RepoResult]:
         asyncio.create_task(run_worker(repo, config, semaphore, _log))
         for repo in config.repos
     ]
-    return await asyncio.gather(*tasks)
+    results = await asyncio.gather(*tasks)
+
+    if config.settings.cleanup:
+        removed = cleanup_clones(config.repos, config.work_dir_path)
+        if removed:
+            _note(f"Removed {removed} clone(s) from {config.work_dir_path}")
+
+    return results
 
 
 _CHECK = "✓"

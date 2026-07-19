@@ -4,9 +4,9 @@
 
 # The repositories to process. Use "owner/name" (recommended) or a full URL.
 repos:
-  - allistera/Cookie-Web
-  - allistera/some-other-project
-  # - https://github.com/allistera/yet-another.git
+- allistera/Cookie-Web
+- allistera/some-other-project
+# - https://github.com/allistera/yet-another.git
 
 settings:
   # Number of repos processed in parallel. Each is a separate Claude worker.
@@ -19,7 +19,7 @@ settings:
   # model: claude-sonnet-5
 
   # Base branch for the work. null = each repo's default branch.
-  base_branch: null
+  base_branch: main
 
   # Branch each worker creates its changes on.
   work_branch: chore/dependency-updates
@@ -36,3 +36,7 @@ settings:
 
   # Freshen an existing clone instead of re-cloning it.
   reuse_clones: true
+
+  # Delete every cloned repo once the run finishes. Only the clones this run
+  # manages are removed (plus the work dir if it ends up empty).
+  cleanup: false

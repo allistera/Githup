@@ -87,6 +87,27 @@ async def clone_or_update(repo: str, work_dir: Path, reuse: bool) -> Path:
     return dest
 
 
+def cleanup_clones(repos: list[str], work_dir: Path) -> int:
+    """Delete the clone directory for each repo. Returns how many were removed.
+
+    Only the per-repo clone directories this run would have created (keyed by
+    :func:`_slug`) are touched; the work dir itself is removed only if it ends
+    up empty, so an unrelated or shared directory is never blown away.
+    """
+    removed = 0
+    for repo in repos:
+        dest = work_dir / _slug(repo)
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
+            removed += 1
+    try:
+        if work_dir.exists() and not any(work_dir.iterdir()):
+            work_dir.rmdir()
+    except OSError:
+        pass
+    return removed
+
+
 def _parse_report(text: str) -> dict[str, str]:
     report: dict[str, str] = {}
     for line in text.splitlines():

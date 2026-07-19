@@ -11,7 +11,13 @@ import pytest
 
 from github_update.config import Config, Settings, load_config
 from github_update.orchestrator import summarise
-from github_update.worker import RepoResult, _extract_pr_url, _parse_report, _slug
+from github_update.worker import (
+    RepoResult,
+    _extract_pr_url,
+    _parse_report,
+    _slug,
+    cleanup_clones,
+)
 
 
 # --- repo slug -------------------------------------------------------------
@@ -111,6 +117,48 @@ def test_summary_flags_absent_when_no_work():
     # PR present but neither flag set -> no checkmark anywhere.
     assert "https://github.com/a/real/pull/1" in out
     assert "✓" not in out
+
+
+# --- clone cleanup ---------------------------------------------------------
+
+def test_cleanup_removes_only_managed_clones(tmp_path):
+    work = tmp_path / "work_repos"
+    work.mkdir()
+    # Two clones this run manages, one unrelated dir that must survive.
+    (work / _slug("allistera/Cookie-Web")).mkdir()
+    (work / _slug("allistera/paper")).mkdir()
+    keep = work / "not-a-clone"
+    keep.mkdir()
+    (keep / "important.txt").write_text("do not delete")
+
+    removed = cleanup_clones(["allistera/Cookie-Web", "allistera/paper"], work)
+
+    assert removed == 2
+    assert not (work / _slug("allistera/Cookie-Web")).exists()
+    assert not (work / _slug("allistera/paper")).exists()
+    # Unrelated content is left alone, and so is the (non-empty) work dir.
+    assert keep.exists()
+    assert work.exists()
+
+
+def test_cleanup_removes_empty_work_dir(tmp_path):
+    work = tmp_path / "work_repos"
+    work.mkdir()
+    (work / _slug("a/b")).mkdir()
+
+    removed = cleanup_clones(["a/b"], work)
+
+    assert removed == 1
+    # Nothing left -> the work dir itself is removed.
+    assert not work.exists()
+
+
+def test_cleanup_no_clones_is_noop(tmp_path):
+    work = tmp_path / "work_repos"
+    work.mkdir()
+    assert cleanup_clones(["a/b"], work) == 0
+    # Empty work dir gets tidied away too.
+    assert not work.exists()
 
 
 # --- config loading --------------------------------------------------------
