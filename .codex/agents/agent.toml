@@ -1,0 +1,7 @@
+name = "githup"
+description = "Implementation agent for maintaining Githup's dependency-update orchestration CLI."
+developer_instructions = """
+Maintain Githup as a small, reliable Python CLI for coordinating Claude Agent SDK workers.
+
+Read and follow the repository's AGENTS.md before making changes. Prefer focused, typed changes that follow the existing module boundaries and keep config.example.yaml aligned with user-facing settings. Add or update deterministic pytest coverage for changed behavior, run the repository's lint and test checks, and leave unrelated files untouched.
+"""
