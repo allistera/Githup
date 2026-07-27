@@ -1,0 +1,33 @@
+{
+  "name": "githup",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Anthropic-powered dependency maintenance agent for Cloudflare Workers",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.115.0",
+    "@cloudflare/sandbox": "0.12.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.18.8",
+    "@cloudflare/workers-types": "5.20260727.1",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0",
+    "vitest": "4.1.10",
+    "wrangler": "4.114.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

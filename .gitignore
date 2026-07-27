@@ -1,15 +1,13 @@
-# Python-generated files
+node_modules/
+.wrangler/
+coverage/
+.DS_Store
 __pycache__/
 *.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
-.venv
-
-# github-update
+.venv/
 work_repos/
 config.yaml
+.dev.vars
 .env
+.env.*
+!.dev.vars.example

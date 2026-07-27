@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "githup",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "vars": {
+    "ANTHROPIC_MODEL": "claude-sonnet-4-5",
+    "SANDBOX_TRANSPORT": "rpc"
+  },
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "Sandbox",
+        "name": "Sandbox"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "new_sqlite_classes": ["Sandbox"],
+      "tag": "v1"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "githup-repository-maintenance",
+      "binding": "GITHUP_WORKFLOW",
+      "class_name": "RepositoryMaintenanceWorkflow"
+    }
+  ]
+}
