@@ -229,7 +229,7 @@ async def run_worker(
         result.pr_url = _extract_pr_url(result.report)
 
     result.duration_s = time.monotonic() - started
-    log(repo, "finished in {:.0f}s".format(result.duration_s))
+    log(repo, f"finished in {result.duration_s:.0f}s")
 
     if verbose:
         log(repo, f"done: {result.status} (${result.cost_usd:.2f}, "

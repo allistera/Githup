@@ -21,7 +21,6 @@ from githup.worker import (
     cleanup_clones,
 )
 
-
 # --- repo slug -------------------------------------------------------------
 
 @pytest.mark.parametrize("repo,expected", [

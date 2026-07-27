@@ -96,7 +96,7 @@ def load_config(path: str | os.PathLike[str]) -> Config:
 
     raw = yaml.safe_load(path.read_text()) or {}
     if not isinstance(raw, dict):
-        raise ValueError("Config root must be a mapping")
+        raise ValueError("Config root must be a mapping")  # noqa: TRY004
 
     repos = [_normalise_repo(r) for r in (raw.get("repos") or [])]
 
