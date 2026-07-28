@@ -166,6 +166,39 @@ All run endpoints require `Authorization: Bearer <API_TOKEN>`. `GET /health` is 
 
 ## Deploy
 
+### GitHub Actions
+
+The CI workflow validates every pull request. After validation passes, pushes to
+`main` deploy the Worker, synchronize its runtime secrets, and verify `GET /health`.
+You can also run the workflow manually from the Actions tab. Production deployments
+use the `production` GitHub environment, so environment protection rules can require
+approval if desired.
+
+Add these repository or `production` environment secrets in GitHub:
+
+| Secret | Required | Purpose |
+|---|---:|---|
+| `CLOUDFLARE_API_TOKEN` | Yes | Deploys the Worker, Workflow, and Sandbox container |
+| `CLOUDFLARE_ACCOUNT_ID` | Yes | Selects the target Cloudflare account |
+| `ANTHROPIC_API_KEY` | Yes | Runtime Anthropic API access |
+| `WORKER_GITHUB_TOKEN` | Yes | Runtime fine-grained GitHub token used by Githup |
+| `API_TOKEN` | Yes | Bearer token protecting the Githup HTTP API |
+| `PROJEKTOR_MCP_URL` | No | Projektor MCP endpoint including the workspace UUID |
+| `PROJEKTOR_API_TOKEN` | No | Projektor workspace API token |
+| `PROJEKTOR_ACCESS_CLIENT_ID` | No | Cloudflare Access service-token client ID |
+| `PROJEKTOR_ACCESS_CLIENT_SECRET` | No | Cloudflare Access service-token client secret |
+
+The two Projektor MCP values must be supplied together. The two Projektor Access
+values must also be supplied together and require the MCP values. GitHub reserves
+secret names beginning with `GITHUB_`, so the workflow maps `WORKER_GITHUB_TOKEN` to
+the Worker's `GITHUB_TOKEN` binding during deployment.
+
+Use a least-privilege Cloudflare token scoped to the target account. It must be able
+to deploy Workers and update Worker secrets. The GitHub token should be fine-grained
+and limited to the repositories Githup maintains.
+
+### Manual deployment
+
 ```bash
 npx wrangler login
 npm run deploy
