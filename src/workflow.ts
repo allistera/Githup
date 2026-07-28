@@ -1,9 +1,10 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam, ToolResultBlockParam, ToolUseBlock } from "@anthropic-ai/sdk/resources/messages";
 import { getSandbox } from "@cloudflare/sandbox";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
 import { buildTaskPrompt, parseReport, SYSTEM_PROMPT } from "./prompts";
+import { createAnthropicClient } from "./inference";
 import { executeProjektorTool, isProjektorTool, listProjektorTools } from "./projektor";
 import { executeTool, prepareRepository, TOOLS } from "./tools";
 import type { Env, RepositoryReport, RunParameters, ToolContext } from "./types";
@@ -88,7 +89,7 @@ export class RepositoryMaintenanceWorkflow extends WorkflowEntrypoint<Env, RunPa
             timeout: "10 minutes",
           },
           async () => {
-            const anthropic = new Anthropic({ apiKey: this.env.ANTHROPIC_API_KEY });
+            const anthropic = await createAnthropicClient(this.env);
             const response = await anthropic.messages.create({
               model: this.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
               max_tokens: 8_192,

@@ -22,13 +22,13 @@ returns Cloudflare's durable status and, when complete, the agent's structured r
 ## Architecture
 
 ```text
-HTTP API ──▶ Cloudflare Workflow ──▶ Anthropic Messages API
-                    │                         │
-                    │                         ├── bash
-                    │                         ├── Dependabot alerts
-                    │                         ├── push branch
-                    │                         ├── PR/check status
-                    │                         └── Projektor MCP tools (optional)
+HTTP API ──▶ Cloudflare Workflow ──▶ Cloudflare AI Gateway ──▶ Anthropic Messages API
+                    │                                            │
+                    │                                            ├── bash
+                    │                                            ├── Dependabot alerts
+                    │                                            ├── push branch
+                    │                                            ├── PR/check status
+                    │                                            └── Projektor MCP tools (optional)
                     ▼
              Sandbox container
              git + Node + Python + uv
@@ -80,8 +80,11 @@ under Settings → Tokens and must belong to that workspace. If the instance is 
 Cloudflare Access, use a service token for the two `PROJEKTOR_ACCESS_*` values so the
 headless Workflow can pass the Access gate.
 
-The default model is `claude-sonnet-4-5`. Change `ANTHROPIC_MODEL` in
-[`wrangler.jsonc`](./wrangler.jsonc) if needed.
+The default model is `claude-sonnet-4-5`. Anthropic requests are routed through
+Cloudflare AI Gateway using the built-in AI binding and the automatically provisioned
+`default` gateway. Change `ANTHROPIC_MODEL` or `AI_GATEWAY_ID` in
+[`wrangler.jsonc`](./wrangler.jsonc) if needed. The Anthropic API key remains a Worker
+secret and is forwarded only to Anthropic through the gateway.
 
 ## Local development
 

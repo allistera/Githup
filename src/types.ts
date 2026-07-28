@@ -1,11 +1,13 @@
 import type { Sandbox } from "@cloudflare/sandbox";
 
 export interface Env {
+  AI: Ai;
   Sandbox: DurableObjectNamespace<Sandbox>;
   GITHUP_WORKFLOW: Workflow<RunParameters>;
   ANTHROPIC_API_KEY: string;
   GITHUB_TOKEN: string;
   API_TOKEN: string;
+  AI_GATEWAY_ID: string;
   ANTHROPIC_MODEL: string;
   SANDBOX_TRANSPORT?: string;
   PROJEKTOR_MCP_URL?: string;
