@@ -167,6 +167,34 @@ Terminates an in-progress Workflow instance.
 
 All run endpoints require `Authorization: Bearer <API_TOKEN>`. `GET /health` is public.
 
+## Manual GitHub Actions runs
+
+The `Run Githup` workflow provides a form in the repository's Actions tab for
+starting and monitoring a run. Configure its Worker URL and API credential once:
+
+```bash
+gh variable set GITHUP_URL --body "https://githup.YOUR-SUBDOMAIN.workers.dev"
+gh secret set GITHUP_API_TOKEN
+```
+
+`GITHUP_API_TOKEN` must contain the same value as the Worker's `API_TOKEN` secret.
+Once the workflow is on the default branch, open
+**Actions → Run Githup → Run workflow**, enter the target repository in `owner/name`
+format, and leave **dry_run** enabled for the first run.
+
+You can also dispatch it from the command line:
+
+```bash
+gh workflow run run-githup.yml \
+  -f repository=OWNER/NAME \
+  -f dry_run=true
+```
+
+The Actions job creates the Cloudflare Workflow, polls it to completion, writes the
+structured result to the job summary, and fails when Githup reports a partial or
+failed result. Disable `dry_run` only when you want Githup to push its work branch
+and open a pull request.
+
 ## Deploy
 
 ```bash

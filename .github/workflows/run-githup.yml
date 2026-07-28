@@ -1,0 +1,192 @@
+name: Run Githup
+run-name: "Githup: ${{ inputs.repository }} (dry run: ${{ inputs.dry_run }})"
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: Repository to maintain, in owner/name format
+        required: true
+        type: string
+      dry_run:
+        description: Inspect and report without changing the repository
+        required: true
+        default: true
+        type: boolean
+      base_branch:
+        description: Base branch (leave empty to use the repository default)
+        required: false
+        type: string
+      work_branch:
+        description: Branch used for dependency updates
+        required: true
+        default: chore/dependency-updates
+        type: string
+      wait_for_checks:
+        description: Wait for pull-request checks in write mode
+        required: true
+        default: true
+        type: boolean
+      max_turns:
+        description: Maximum agent turns (1-60)
+        required: true
+        default: 30
+        type: number
+      projektor_issue:
+        description: Optional Projektor issue ID or key
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      GITHUP_URL: ${{ vars.GITHUP_URL }}
+      GITHUP_API_TOKEN: ${{ secrets.GITHUP_API_TOKEN }}
+      TARGET_REPOSITORY: ${{ inputs.repository }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      BASE_BRANCH: ${{ inputs.base_branch }}
+      WORK_BRANCH: ${{ inputs.work_branch }}
+      WAIT_FOR_CHECKS: ${{ inputs.wait_for_checks }}
+      MAX_TURNS: ${{ inputs.max_turns }}
+      PROJEKTOR_ISSUE: ${{ inputs.projektor_issue }}
+
+    steps:
+      - name: Validate configuration
+        run: |
+          if [ -z "$GITHUP_URL" ]; then
+            echo "::error::Set the GITHUP_URL repository variable to the deployed Worker URL."
+            exit 1
+          fi
+          if [ -z "$GITHUP_API_TOKEN" ]; then
+            echo "::error::Set the GITHUP_API_TOKEN repository secret."
+            exit 1
+          fi
+          case "$GITHUP_URL" in
+            https://*) ;;
+            *)
+              echo "::error::GITHUP_URL must be an https:// URL."
+              exit 1
+              ;;
+          esac
+
+      - name: Trigger run
+        id: trigger
+        run: |
+          payload_file=$(mktemp)
+          response_file=$(mktemp)
+          trap 'rm -f "$payload_file" "$response_file"' EXIT
+
+          jq -n \
+            --arg repo "$TARGET_REPOSITORY" \
+            --argjson dryRun "$DRY_RUN" \
+            --arg baseBranch "$BASE_BRANCH" \
+            --arg workBranch "$WORK_BRANCH" \
+            --argjson waitForChecks "$WAIT_FOR_CHECKS" \
+            --argjson maxTurns "$MAX_TURNS" \
+            --arg projektorIssue "$PROJEKTOR_ISSUE" \
+            '{
+              repo: $repo,
+              dryRun: $dryRun,
+              workBranch: $workBranch,
+              waitForChecks: $waitForChecks,
+              maxTurns: $maxTurns
+            }
+            + if $baseBranch == "" then {} else {baseBranch: $baseBranch} end
+            + if $projektorIssue == "" then {} else {projektorIssue: $projektorIssue} end' \
+            > "$payload_file"
+
+          status_code=$(curl --silent --show-error \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            --request POST "$GITHUP_URL/runs" \
+            --header "Authorization: Bearer $GITHUP_API_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data-binary "@$payload_file")
+
+          if [ "$status_code" != "202" ]; then
+            echo "::error::Githup returned HTTP $status_code while creating the run."
+            if ! jq . "$response_file"; then
+              cat "$response_file"
+            fi
+            exit 1
+          fi
+
+          run_id=$(jq -er '.runs[0].id' "$response_file")
+          echo "Created Githup run $run_id for $TARGET_REPOSITORY."
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Poll run to completion
+        env:
+          RUN_ID: ${{ steps.trigger.outputs.run_id }}
+        run: |
+          response_file=$(mktemp)
+          trap 'rm -f "$response_file"' EXIT
+
+          for attempt in $(seq 1 1320); do
+            status_code=$(curl --silent --show-error \
+              --retry 3 \
+              --retry-all-errors \
+              --output "$response_file" \
+              --write-out "%{http_code}" \
+              --header "Authorization: Bearer $GITHUP_API_TOKEN" \
+              "$GITHUP_URL/runs/$RUN_ID")
+
+            if [ "$status_code" != "200" ]; then
+              echo "::error::Githup returned HTTP $status_code while polling run $RUN_ID."
+              if ! jq . "$response_file"; then
+                cat "$response_file"
+              fi
+              exit 1
+            fi
+
+            state=$(jq -er '.status' "$response_file")
+            echo "Run $RUN_ID is $state (poll $attempt)."
+
+            case "$state" in
+              complete)
+                report_status=$(jq -r '.output.status // "unknown"' "$response_file")
+                {
+                  echo "## Githup run"
+                  echo
+                  printf -- '- Repository: %s\n' "$TARGET_REPOSITORY"
+                  printf -- '- Run ID: %s\n' "$RUN_ID"
+                  printf -- '- Workflow state: %s\n' "$state"
+                  printf -- '- Report status: %s\n' "$report_status"
+                  echo
+                  printf '%s\n' '```json'
+                  jq . "$response_file"
+                  printf '%s\n' '```'
+                } >> "$GITHUB_STEP_SUMMARY"
+                jq . "$response_file"
+
+                case "$report_status" in
+                  success|skipped) exit 0 ;;
+                  *)
+                    echo "::error::Githup completed with report status '$report_status'."
+                    exit 1
+                    ;;
+                esac
+                ;;
+              errored|terminated)
+                jq . "$response_file"
+                echo "::error::Githup run ended with workflow state '$state'."
+                exit 1
+                ;;
+              queued|running|paused|waiting)
+                sleep 15
+                ;;
+              *)
+                jq . "$response_file"
+                echo "::error::Githup returned unknown workflow state '$state'."
+                exit 1
+                ;;
+            esac
+          done
+
+          echo "::error::Githup run did not finish within 5 hours 30 minutes."
+          exit 1
