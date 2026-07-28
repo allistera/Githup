@@ -2,6 +2,7 @@ export { Sandbox } from "@cloudflare/sandbox";
 export { RepositoryMaintenanceWorkflow } from "./workflow";
 
 import { parseRunRequest } from "./config";
+import { projektorConfig } from "./projektor";
 import type { Env, RunRequestBody } from "./types";
 
 function json(body: unknown, status = 200): Response {
@@ -43,6 +44,16 @@ async function createRuns(request: Request, env: Env): Promise<Response> {
     return json({ error: error instanceof Error ? error.message : String(error) }, 400);
   }
 
+  let hasProjektor: boolean;
+  try {
+    hasProjektor = projektorConfig(env) !== null;
+  } catch (error) {
+    return json({ error: error instanceof Error ? error.message : String(error) }, 500);
+  }
+  if (parameters.some((params) => params.projektorIssue) && !hasProjektor) {
+    return json({ error: "projektorIssue requires the Projektor MCP integration" }, 400);
+  }
+
   try {
     const instances = await Promise.all(
       parameters.map((params) =>
@@ -79,7 +90,15 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, service: "githup", provider: "anthropic" });
+      try {
+        const projektor = projektorConfig(env) !== null;
+        return json({ ok: true, service: "githup", provider: "anthropic", projektor });
+      } catch {
+        return json(
+          { ok: false, service: "githup", provider: "anthropic", projektor: "invalid" },
+          500,
+        );
+      }
     }
 
     if (!(await authenticated(request, env))) {

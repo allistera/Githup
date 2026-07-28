@@ -13,8 +13,16 @@ describe("parseRunRequest", () => {
         openPullRequest: false,
         waitForChecks: false,
         maxTurns: 30,
+        projektorIssue: null,
       },
     ]);
+  });
+
+  it("links a single repository run to a Projektor issue", () => {
+    expect(parseRunRequest({ repo: "a/one", projektorIssue: "PROJ-42" })[0]).toMatchObject({
+      repo: "a/one",
+      projektorIssue: "PROJ-42",
+    });
   });
 
   it("accepts multiple write-mode repositories", () => {
@@ -40,6 +48,8 @@ describe("parseRunRequest", () => {
     [{ repo: "a/b", workBranch: "-unsafe" }, "workBranch"],
     [{ repo: "a/b", maxTurns: 61 }, "maxTurns"],
     [{ repo: "a/b", dryRun: "yes" }, "dryRun"],
+    [{ repo: "a/b", projektorIssue: " " }, "projektorIssue"],
+    [{ repos: ["a/one", "b/two"], projektorIssue: "PROJ-42" }, "single repository"],
     [{ repo: "a/b", dryRun: false, openPullRequest: false }, "sandboxes are temporary"],
   ])("rejects invalid input %#", (body, message) => {
     expect(() => parseRunRequest(body)).toThrow(message);

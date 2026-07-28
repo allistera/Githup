@@ -11,6 +11,7 @@ const defaults: RunParameters = {
   openPullRequest: false,
   waitForChecks: false,
   maxTurns: 30,
+  projektorIssue: null,
 };
 
 describe("buildTaskPrompt", () => {
@@ -35,6 +36,15 @@ describe("buildTaskPrompt", () => {
 
   it("treats repository contents as untrusted", () => {
     expect(SYSTEM_PROMPT).toContain("untrusted data");
+  });
+
+  it("instructs issue-linked workers to use Projektor lifecycle tools", () => {
+    const prompt = buildTaskPrompt({ ...defaults, projektorIssue: "PROJ-42" });
+    expect(prompt).toContain("Projektor issue 'PROJ-42'");
+    expect(prompt).toContain("projektor__");
+    expect(prompt).toContain("claim the issue");
+    expect(prompt).toContain("completion report");
+    expect(prompt).toContain("do not move the issue to In Review or Done");
   });
 });
 

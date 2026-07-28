@@ -4,6 +4,7 @@ import { getSandbox } from "@cloudflare/sandbox";
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 
 import { buildTaskPrompt, parseReport, SYSTEM_PROMPT } from "./prompts";
+import { executeProjektorTool, isProjektorTool, listProjektorTools } from "./projektor";
 import { executeTool, prepareRepository, TOOLS } from "./tools";
 import type { Env, RepositoryReport, RunParameters, ToolContext } from "./types";
 
@@ -55,6 +56,13 @@ export class RepositoryMaintenanceWorkflow extends WorkflowEntrypoint<Env, RunPa
     };
 
     try {
+      const projektorToolsJson = await step.do(
+        "load Projektor tools",
+        { retries: { limit: 2, delay: "5 seconds", backoff: "exponential" } },
+        async () => JSON.stringify(await listProjektorTools(this.env)),
+      );
+      const tools = [...TOOLS, ...(JSON.parse(projektorToolsJson) as Anthropic.Tool[])];
+
       await step.do(
         "clone and prepare repository",
         {
@@ -86,7 +94,7 @@ export class RepositoryMaintenanceWorkflow extends WorkflowEntrypoint<Env, RunPa
               max_tokens: 8_192,
               system: SYSTEM_PROMPT,
               messages: state.messages,
-              tools: TOOLS,
+              tools,
             });
             return JSON.stringify(response);
           },
@@ -120,7 +128,10 @@ export class RepositoryMaintenanceWorkflow extends WorkflowEntrypoint<Env, RunPa
             },
             async () => {
               try {
-                return { content: await executeTool(toolUse.name, toolUse.input, context) };
+                const content = isProjektorTool(toolUse.name)
+                  ? await executeProjektorTool(this.env, toolUse.name, toolUse.input)
+                  : await executeTool(toolUse.name, toolUse.input, context);
+                return { content };
               } catch (error) {
                 return {
                   content: error instanceof Error ? error.message : String(error),

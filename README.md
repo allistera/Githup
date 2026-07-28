@@ -13,6 +13,8 @@ The Worker can:
 4. Run install, build, lint, and test commands inside an isolated Linux container.
 5. Commit and push a dedicated branch, then open a pull request.
 6. Inspect the pull request's GitHub check runs and iterate on failures.
+7. Optionally coordinate an issue-linked run through a self-hosted
+   [Projektor](https://tajd.github.io/projektor/) workspace over MCP.
 
 Runs are asynchronous. `POST /runs` returns an ID immediately and `GET /runs/:id`
 returns Cloudflare's durable status and, when complete, the agent's structured report.
@@ -25,7 +27,8 @@ HTTP API ──▶ Cloudflare Workflow ──▶ Anthropic Messages API
                     │                         ├── bash
                     │                         ├── Dependabot alerts
                     │                         ├── push branch
-                    │                         └── PR/check status
+                    │                         ├── PR/check status
+                    │                         └── Projektor MCP tools (optional)
                     ▼
              Sandbox container
              git + Node + Python + uv
@@ -44,6 +47,8 @@ may maintain.
 - An Anthropic API key
 - A fine-grained GitHub token with access to the target repositories and permissions
   for contents, pull requests, Dependabot alerts, actions, and commit statuses
+- Optionally, a deployed Projektor instance and a workspace-scoped API token with
+  read/write access
 
 ## Setup
 
@@ -59,6 +64,21 @@ ANTHROPIC_API_KEY=...
 GITHUB_TOKEN=...
 API_TOKEN=... # a long random bearer token for this Worker's HTTP API
 ```
+
+To enable Projektor locally, also set:
+
+```dotenv
+PROJEKTOR_MCP_URL=https://projektor.example/mcp/WORKSPACE_UUID
+PROJEKTOR_API_TOKEN=pk_...
+# Required only when Cloudflare Access protects the Projektor instance:
+PROJEKTOR_ACCESS_CLIENT_ID=...
+PROJEKTOR_ACCESS_CLIENT_SECRET=...
+```
+
+The MCP URL must include the workspace UUID. The API token is created in Projektor
+under Settings → Tokens and must belong to that workspace. If the instance is behind
+Cloudflare Access, use a service token for the two `PROJEKTOR_ACCESS_*` values so the
+headless Workflow can pass the Access gate.
 
 The default model is `claude-sonnet-4-5`. Change `ANTHROPIC_MODEL` in
 [`wrangler.jsonc`](./wrangler.jsonc) if needed.
@@ -113,7 +133,8 @@ Accepts one `repo` or up to 20 `repos`:
   "workBranch": "chore/dependency-updates",
   "dryRun": false,
   "waitForChecks": true,
-  "maxTurns": 30
+  "maxTurns": 30,
+  "projektorIssue": "PROJ-42"
 }
 ```
 
@@ -122,6 +143,14 @@ Defaults are deliberately safe: `dryRun` is `true`, the work branch is
 repository as an independent Workflow instance, so fan-out does not keep one HTTP
 request open. Write runs always open a pull request because their temporary sandbox
 is destroyed at completion; set `dryRun` to inspect without publishing changes.
+
+`projektorIssue` is optional and can only be used with a single `repo`. When present,
+Claude is instructed to fetch Projektor's canonical workflow and issue, register and
+claim the work, report the result with verifiable PR or commit evidence, and release
+its agent session. Projektor's live MCP tool schemas are discovered at the start of
+each Workflow and exposed to Claude with a `projektor__` prefix. Runs without
+`projektorIssue` can still use Projektor tools when the integration is configured, but
+their normal dependency-maintenance behavior is unchanged.
 
 ### `GET /runs/:id`
 
@@ -144,6 +173,31 @@ npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put API_TOKEN
 ```
+
+For Projektor-backed runs, deploy Projektor separately first. Its
+[deployment guide](https://tajd.github.io/projektor/guides/deploying/#2-provision-cloudflare-resources)
+provisions its D1 database, KV namespace, and R2 bucket:
+
+```bash
+wrangler d1 create projektor
+wrangler kv namespace create projektor
+wrangler r2 bucket create projektor-files
+```
+
+Finish the Projektor deployment, create a workspace API token, then configure this
+Worker:
+
+```bash
+npx wrangler secret put PROJEKTOR_MCP_URL
+npx wrangler secret put PROJEKTOR_API_TOKEN
+# Only when the Projektor instance is behind Cloudflare Access:
+npx wrangler secret put PROJEKTOR_ACCESS_CLIENT_ID
+npx wrangler secret put PROJEKTOR_ACCESS_CLIENT_SECRET
+```
+
+Set each Access value together or omit both. Likewise, the MCP URL and Projektor token
+must either both be present or both be absent. `GET /health` reports `projektor: true`,
+`false`, or returns an invalid-configuration error without exposing any credentials.
 
 Deploy once before adding secrets because Wrangler creates the Worker and its
 Sandbox/Workflow bindings on the first deployment. A production secret update creates

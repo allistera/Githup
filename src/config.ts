@@ -25,6 +25,14 @@ function repository(value: unknown): string {
   return value;
 }
 
+function optionalProjektorIssue(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string" || !value.trim() || value.length > 200) {
+    throw new Error("projektorIssue must be a non-empty issue ID or key");
+  }
+  return value.trim();
+}
+
 export function parseRunRequest(body: RunRequestBody): RunParameters[] {
   const rawRepos = body.repos ?? (body.repo === undefined ? undefined : [body.repo]);
   if (!Array.isArray(rawRepos) || rawRepos.length === 0) {
@@ -46,6 +54,10 @@ export function parseRunRequest(body: RunRequestBody): RunParameters[] {
   if (!Number.isInteger(maxTurns) || (maxTurns as number) < 1 || (maxTurns as number) > 60) {
     throw new Error("maxTurns must be an integer between 1 and 60");
   }
+  const projektorIssue = optionalProjektorIssue(body.projektorIssue);
+  if (projektorIssue && rawRepos.length !== 1) {
+    throw new Error("projektorIssue can only be used with a single repository run");
+  }
 
   return rawRepos.map((value) => ({
     repo: repository(value),
@@ -55,6 +67,7 @@ export function parseRunRequest(body: RunRequestBody): RunParameters[] {
     openPullRequest: !dryRun,
     waitForChecks: dryRun || !openPullRequest ? false : waitForChecks,
     maxTurns: maxTurns as number,
+    projektorIssue,
   }));
 }
 

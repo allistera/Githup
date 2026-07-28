@@ -22,9 +22,13 @@ export function buildTaskPrompt(parameters: RunParameters): string {
     ? `This is a DRY RUN. Do not modify files, commit, push, or open a pull request. Inspect the repository, identify outdated dependencies and open Dependabot alerts, and report the exact changes you would make.`
     : `Update all dependencies to their latest compatible versions and fix every actionable Dependabot alert. Work on '${parameters.workBranch}', based on ${base}. Build/install, lint, and run the complete test suite. Commit the verified result.${parameters.openPullRequest ? " Push it with push_branch and open a pull request with open_pull_request." : " Leave the commit in the sandbox; do not push or open a pull request."}${parameters.waitForChecks ? " After opening the pull request, use get_pull_request_checks. If checks fail, diagnose, fix, test, commit, push again, and recheck." : " Do not wait for CI checks."}`;
 
+  const projektor = parameters.projektorIssue
+    ? `\n\nThis run is linked to Projektor issue '${parameters.projektorIssue}'. Projektor MCP tools are prefixed with 'projektor__'. Start by fetching the canonical workflow and the issue, then register an agent session and claim the issue before doing repository work. Follow the returned tool schemas and workflow. Keep the session active while working. Before your final report, post the outcome, attach the required completion report and transition the issue appropriately, release its lease, and end the agent session. Use the pull request or commit URL as externally verifiable evidence when available.${parameters.dryRun ? " Because this is a dry run, post the findings but do not move the issue to In Review or Done." : ""}`
+    : "";
+
   return `Repository: ${parameters.repo}
 
-${action}
+${action}${projektor}
 
 Use list_dependabot_alerts rather than trying to access GitHub credentials from bash.
 

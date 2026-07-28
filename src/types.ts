@@ -8,6 +8,10 @@ export interface Env {
   API_TOKEN: string;
   ANTHROPIC_MODEL: string;
   SANDBOX_TRANSPORT?: string;
+  PROJEKTOR_MCP_URL?: string;
+  PROJEKTOR_API_TOKEN?: string;
+  PROJEKTOR_ACCESS_CLIENT_ID?: string;
+  PROJEKTOR_ACCESS_CLIENT_SECRET?: string;
 }
 
 export interface RunRequestBody {
@@ -19,6 +23,7 @@ export interface RunRequestBody {
   openPullRequest?: unknown;
   waitForChecks?: unknown;
   maxTurns?: unknown;
+  projektorIssue?: unknown;
 }
 
 export interface RunParameters {
@@ -29,6 +34,7 @@ export interface RunParameters {
   openPullRequest: boolean;
   waitForChecks: boolean;
   maxTurns: number;
+  projektorIssue: string | null;
 }
 
 export interface RepositoryReport {

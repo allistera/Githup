@@ -1,3 +1,8 @@
 ANTHROPIC_API_KEY=replace-me
 GITHUB_TOKEN=replace-me
 API_TOKEN=replace-with-a-long-random-token
+# Optional Projektor MCP integration:
+# PROJEKTOR_MCP_URL=https://projektor.example/mcp/workspace-uuid
+# PROJEKTOR_API_TOKEN=pk_replace-me
+# PROJEKTOR_ACCESS_CLIENT_ID=replace-me
+# PROJEKTOR_ACCESS_CLIENT_SECRET=replace-me

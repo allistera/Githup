@@ -52,5 +52,6 @@ function parameters(): RunParameters {
     openPullRequest: true,
     waitForChecks: true,
     maxTurns: 30,
+    projektorIssue: null,
   };
 }
