@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import shutil
 import time
@@ -46,6 +47,19 @@ class RepoResult:
     pr_url: str | None = None
     report: dict[str, str] = field(default_factory=dict)
     error: str | None = None
+
+
+def _otel_env_for_repo(repo: str) -> dict[str, str]:
+    """Tag this worker's OTEL logs/metrics with the repo it's processing.
+
+    Appends `repo=<repo>` to any OTEL_RESOURCE_ATTRIBUTES already set in the
+    environment (e.g. service.name=github-update), so SigNoz can filter one
+    worker's telemetry out of the pool.
+    """
+    base = os.environ.get("OTEL_RESOURCE_ATTRIBUTES", "")
+    tag = f"repo={repo}"
+    attrs = f"{base},{tag}" if base else tag
+    return {"OTEL_RESOURCE_ATTRIBUTES": attrs}
 
 
 def _slug(repo: str) -> str:
@@ -133,6 +147,7 @@ async def run_worker(
             # Do not inherit the user's global/project CLAUDE.md or settings:
             # each worker runs in a clean, predictable context.
             setting_sources=None,
+            env=_otel_env_for_repo(repo),
         )
         task = build_task_prompt(
             repo,
