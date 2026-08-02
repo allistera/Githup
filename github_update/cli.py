@@ -7,6 +7,8 @@ import asyncio
 import shutil
 import sys
 
+from dotenv import load_dotenv
+
 from .config import Config, Settings, load_config
 from .orchestrator import run_all, summarise
 
@@ -61,6 +63,7 @@ def _config_from_args(args: argparse.Namespace) -> Config:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_dotenv()
     args = build_parser().parse_args(argv)
 
     problems = _check_prerequisites()
