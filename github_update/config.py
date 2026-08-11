@@ -8,6 +8,7 @@ overridden on the command line.
 from __future__ import annotations
 
 import os
+import tempfile
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
@@ -62,7 +63,13 @@ class Config:
 
     @property
     def work_dir_path(self) -> Path:
-        return Path(self.settings.work_dir).expanduser().resolve()
+        # Resolve relative work dirs under the system temp dir, not the CWD: on
+        # the agent platform the image filesystem is read-only and /tmp is the
+        # only writable path, and locally this keeps clones out of the checkout.
+        work_dir = Path(self.settings.work_dir).expanduser()
+        if not work_dir.is_absolute():
+            work_dir = Path(tempfile.gettempdir()) / work_dir
+        return work_dir.resolve()
 
 
 def _normalise_repo(entry: Any) -> str:
