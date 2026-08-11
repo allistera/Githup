@@ -1,0 +1,44 @@
+apiVersion: orchestration.agents/v1alpha1
+kind: Agent
+
+metadata:
+  name: github-update
+  displayName: GitHub Update
+  description: >-
+    Fans out Claude Agent SDK workers across GitHub repositories to update
+    dependencies and fix Dependabot alerts, opening a pull request per repo.
+    Needs ANTHROPIC_API_KEY for the workers and GH_TOKEN for git/GitHub access.
+
+spec:
+  build:
+    context: .
+    dockerfile: Dockerfile
+
+  execution:
+    command: ["python", "-m", "github_update.agent"]
+    workingDirectory: /workspace
+    timeout: 60m
+    network: bridge
+    resources:
+      cpus: 2.0
+      memory: 2Gi
+      pids: 512
+
+  interface:
+    inputPath: /run/agent/input.json
+    outputPath: /run/agent/output.json
+    artifactsPath: /run/agent/artifacts
+
+  secrets:
+    - environmentVariable: ANTHROPIC_API_KEY
+      required: true
+    - environmentVariable: GH_TOKEN
+      required: true
+
+  steps:
+    - key: prepare
+      name: Load run input
+    - key: update
+      name: Update repositories
+    - key: report
+      name: Write report

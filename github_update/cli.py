@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         config = _config_from_args(args)
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, TypeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

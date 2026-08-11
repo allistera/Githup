@@ -116,6 +116,38 @@ allistera/monzo-mcp                           success   $  0.94     82s
 total cost: $0.94
 ```
 
+## Running on Progenitor
+
+This repo is also packaged as an agent for the
+[Progenitor](https://github.com/allistera/Progenitor) orchestration platform:
+[`agent.yaml`](./agent.yaml) is the manifest, [`Dockerfile`](./Dockerfile)
+builds the image (Python + `git` + `gh` + Claude Code CLI), and
+`python -m github_update.agent` implements the platform's file/stdout contract
+directly — read `AGENT_INPUT_PATH`, write `AGENT_OUTPUT_PATH`, emit
+`::agent-event::` progress lines, exit 0 on success. No platform SDK is used.
+
+Register the repository with the platform's GitHub App using
+`manifest_path: agent.yaml` (the default), and bind two secrets:
+`ANTHROPIC_API_KEY` (authenticates the Claude workers) and `GH_TOKEN`
+(authenticates `gh` for cloning, Dependabot alerts, and PRs; needs the
+`repo` + `security_events` scopes).
+
+Run input (`input.json`) mirrors config.yaml:
+
+```json
+{"repos": ["allistera/Cookie-Web"], "settings": {"dry_run": true}}
+```
+
+Run output (`output.json`):
+
+```json
+{"repos": [...], "succeeded": 1, "failed": 0, "total_cost_usd": 0.94, "pull_requests": []}
+```
+
+The manifest declares three steps — `prepare` (parse input, check tools),
+`update` (the worker pool), `report` (write output) — which the entrypoint
+reports via `::agent-event::` lines.
+
 ## Safety
 
 - Workers only ever operate inside their own clone under `work_dir/`.
