@@ -11,9 +11,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Claude Code CLI - the Agent SDK drives it as a subprocess.
-RUN curl -fsSL https://claude.ai/install.sh | bash
-ENV PATH="/root/.local/bin:${PATH}"
+# Claude Code CLI - the Agent SDK drives it as a subprocess. The platform runs
+# agent containers as a non-root UID that cannot read /root, so install to a
+# world-readable prefix and give the runtime user a writable HOME (/tmp is the
+# platform's only writable path).
+RUN HOME=/opt/claude bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
+    && chmod -R a+rX /opt/claude
+ENV PATH="/opt/claude/.local/bin:${PATH}"
+ENV HOME=/tmp
 
 WORKDIR /workspace
 COPY pyproject.toml README.md ./
