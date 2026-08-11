@@ -172,12 +172,20 @@ async def run_worker(
                         last_text = message.result
                     if message.is_error:
                         result.status = "failed"
-                        result.error = (message.subtype or "agent error")
+                        # On API failures the CLI reports subtype "success" with
+                        # the real cause in `result` — prefer that text.
+                        result.error = (
+                            message.result or message.subtype or "agent error"
+                        )
+                        log(repo, f"error result: {result.error}")
         except Exception as exc:  # noqa: BLE001
-            result.status = "error"
-            result.error = f"agent: {exc}"
+            # The CLI exits non-zero after an error result; keep the informative
+            # error captured from the ResultMessage over the generic exception.
+            if result.status != "failed" or not result.error:
+                result.status = "error"
+                result.error = f"agent: {exc}"
+                log(repo, f"agent failed: {exc}")
             result.duration_s = time.monotonic() - started
-            log(repo, f"agent failed: {exc}")
             return result
 
         result.report = _parse_report(last_text)
