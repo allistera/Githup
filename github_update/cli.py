@@ -9,7 +9,7 @@ import sys
 
 from dotenv import load_dotenv
 
-from .config import Config, Settings, load_config
+from .config import Config, Settings, expand_repos, load_config
 from .orchestrator import run_all, summarise
 
 
@@ -30,7 +30,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("-c", "--config", default="config.yaml",
                    help="Path to the YAML config file (default: config.yaml).")
     p.add_argument("-r", "--repo", action="append", dest="repos", metavar="OWNER/NAME",
-                   help="Process this repo instead of the config's list. Repeatable.")
+                   help="Process this repo instead of the config's list. Repeatable. "
+                   "Use OWNER/* to process every repo owned by OWNER.")
     p.add_argument("-j", "--concurrency", type=int,
                    help="Number of workers to run in parallel.")
     p.add_argument("--model", help="Override the model used by every worker.")
@@ -44,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def _config_from_args(args: argparse.Namespace) -> Config:
     if args.repos:
-        config = Config(repos=list(args.repos), settings=Settings())
+        config = Config(repos=expand_repos(list(args.repos)), settings=Settings())
     else:
         config = load_config(args.config)
 
@@ -74,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         config = _config_from_args(args)
-    except (FileNotFoundError, TypeError, ValueError) as exc:
+    except (FileNotFoundError, TypeError, ValueError, RuntimeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

@@ -24,7 +24,7 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
 
-from .config import Config, Settings
+from .config import Config, Settings, expand_repos
 from .orchestrator import run_all
 
 
@@ -55,7 +55,10 @@ def _load_config(input_path: Path) -> Config:
         raise ValueError("'repos' must be a non-empty list of 'owner/name' strings")
     if not repos:
         raise ValueError("'repos' must not be empty")
-    return Config(repos=[r.strip() for r in repos], settings=_settings_from(payload.get("settings")))
+    return Config(
+        repos=expand_repos([r.strip() for r in repos]),
+        settings=_settings_from(payload.get("settings")),
+    )
 
 
 def main() -> int:
@@ -65,7 +68,7 @@ def main() -> int:
     _emit("step.started", step="prepare", message="Reading run input.")
     try:
         config = _load_config(input_path)
-    except (ValueError, TypeError, json.JSONDecodeError) as error:
+    except (ValueError, TypeError, RuntimeError, json.JSONDecodeError) as error:
         print(f"invalid run input: {error}", file=sys.stderr)
         _emit("step.failed", step="prepare", message=str(error))
         return 1

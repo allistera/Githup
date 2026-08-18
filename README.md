@@ -75,6 +75,7 @@ Then a real run:
 uv run github-update                              # use config.yaml
 uv run github-update -j 5                         # 5 workers in parallel
 uv run github-update --repo allistera/monzo-mcp   # ad-hoc, ignore config list
+uv run github-update --repo 'allistera/*'         # every repo allistera owns
 uv run github-update --no-pr                      # commit locally, don't push/PR
 uv run github-update --model claude-sonnet-5
 ```
@@ -84,7 +85,7 @@ uv run github-update --model claude-sonnet-5
 | Flag | Meaning |
 |------|---------|
 | `-c, --config PATH` | Config file (default `config.yaml`). |
-| `-r, --repo OWNER/NAME` | Process this repo instead of the config list. Repeatable. |
+| `-r, --repo OWNER/NAME` | Process this repo instead of the config list. Repeatable. `OWNER/*` processes every repo the owner has. |
 | `-j, --concurrency N` | Number of workers in parallel. |
 | `--model NAME` | Model for every worker. |
 | `--dry-run` | Analyse and report only. No changes, commits, or PRs. |
@@ -96,6 +97,10 @@ uv run github-update --model claude-sonnet-5
 See [`config.example.yaml`](./config.example.yaml). Everything under `settings:`
 is optional and falls back to sensible defaults; `--dry-run`, `--no-pr`,
 `--concurrency`, `--model`, and `--work-dir` can override the file at runtime.
+
+Each entry under `repos:` is `owner/name`, a full URL, or `owner/*` to expand
+(via `gh repo list`, excluding forks and archived repos) into every repo that
+owner has.
 
 Key knobs: `concurrency`, `work_branch`, `base_branch`, `open_pr`, `dry_run`,
 `max_turns`, and `max_budget_usd` (a per-worker spend ceiling, default $2).

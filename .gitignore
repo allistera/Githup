@@ -13,3 +13,6 @@ wheels/
 work_repos/
 config.yaml
 .env
+
+# macOS
+.DS_Store

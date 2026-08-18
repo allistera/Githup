@@ -7,13 +7,18 @@ overridden on the command line.
 
 from __future__ import annotations
 
+import json
 import os
+import re
+import subprocess
 import tempfile
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+_OWNER_GLOB_RE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9-]*)/\*$")
 
 
 @dataclass
@@ -81,6 +86,53 @@ def _normalise_repo(entry: Any) -> str:
     return entry.strip()
 
 
+def _list_owner_repos(owner: str) -> list[str]:
+    """All non-fork, non-archived repos owned by ``owner``, via ``gh``."""
+    try:
+        proc = subprocess.run(
+            [
+                "gh", "repo", "list", owner,
+                "--source", "--no-archived",
+                "--json", "nameWithOwner",
+                "--limit", "1000",
+            ],
+            capture_output=True, text=True, check=True,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            "'gh' is required to expand an 'owner/*' repo entry"
+        ) from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            f"failed to list repos for '{owner}': {exc.stderr.strip() or exc}"
+        ) from exc
+    try:
+        entries = json.loads(proc.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"unexpected 'gh repo list' output for '{owner}'"
+        ) from exc
+    return [e["nameWithOwner"] for e in entries]
+
+
+def expand_repos(repos: list[str]) -> list[str]:
+    """Expand any ``owner/*`` entries into individual ``owner/name`` repos.
+
+    Everything else passes through unchanged. Duplicates (e.g. an explicit
+    repo also covered by a glob) are dropped, keeping first-seen order.
+    """
+    expanded: list[str] = []
+    seen: set[str] = set()
+    for entry in repos:
+        match = _OWNER_GLOB_RE.match(entry)
+        names = _list_owner_repos(match.group(1)) if match else [entry]
+        for name in names:
+            if name not in seen:
+                seen.add(name)
+                expanded.append(name)
+    return expanded
+
+
 def load_config(path: str | os.PathLike[str]) -> Config:
     path = Path(path).expanduser()
     if not path.exists():
@@ -90,7 +142,7 @@ def load_config(path: str | os.PathLike[str]) -> Config:
     if not isinstance(raw, dict):
         raise TypeError("Config root must be a mapping")
 
-    repos = [_normalise_repo(r) for r in (raw.get("repos") or [])]
+    repos = expand_repos([_normalise_repo(r) for r in (raw.get("repos") or [])])
 
     known = {f.name for f in fields(Settings)}
     raw_settings = raw.get("settings") or {}
