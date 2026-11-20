@@ -58,10 +58,11 @@ rather than failing.
 git clone https://github.com/allistera/Githup.git
 cd Githup
 uv sync                       # install dependencies
-$EDITOR config.yaml           # list your repos (see Configuration)
+cp config.example.yaml config.yaml
+$EDITOR config.yaml           # list your repos
 ```
 
-`config.yaml` is gitignored. A minimal one is just a repo list:
+`config.yaml` is gitignored. Only the repo list is required, so a minimal one is:
 
 ```yaml
 repos:
@@ -117,6 +118,8 @@ whatever flags you pass.
 Everything under `settings:` is optional and falls back to the defaults shown
 below; `--dry-run`, `--no-pr`, `--concurrency`, `--model`, and `--work-dir`
 override the file at runtime. Unknown keys under `settings:` are rejected.
+[`config.example.yaml`](./config.example.yaml) is a commented template of the
+same settings:
 
 ```yaml
 repos:
