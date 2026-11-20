@@ -55,10 +55,18 @@ rather than failing.
 ## Setup
 
 ```bash
-cd github-update
+git clone https://github.com/allistera/Githup.git
+cd Githup
 uv sync                       # install dependencies
-cp config.example.yaml config.yaml
-$EDITOR config.yaml           # list your repos
+$EDITOR config.yaml           # list your repos (see Configuration)
+```
+
+`config.yaml` is gitignored. A minimal one is just a repo list:
+
+```yaml
+repos:
+  - allistera/Cookie-Web
+  - allistera/monzo-mcp
 ```
 
 ## Usage
@@ -77,8 +85,11 @@ uv run github-update -j 5                         # 5 workers in parallel
 uv run github-update --repo allistera/monzo-mcp   # ad-hoc, ignore config list
 uv run github-update --repo 'allistera/*'         # every repo allistera owns
 uv run github-update --no-pr                      # commit locally, don't push/PR
-uv run github-update --model claude-sonnet-5
+uv run github-update --model claude-sonnet-5-5
 ```
+
+`--repo` skips `config.yaml` entirely, so the run uses default settings plus
+whatever flags you pass.
 
 ### Options
 
@@ -92,18 +103,54 @@ uv run github-update --model claude-sonnet-5
 | `--no-pr` | Commit to the work branch locally; don't push or open a PR. |
 | `--work-dir DIR` | Where repos are cloned. |
 
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Every repo finished without a `failed` or `error` status. |
+| `1` | At least one repo ended as `failed` or `error`. |
+| `2` | Nothing ran: a required tool (`git`, `gh`, `claude`) is missing, or the config is invalid. |
+| `130` | Interrupted with Ctrl-C. |
+
 ## Configuration
 
-See [`config.example.yaml`](./config.example.yaml). Everything under `settings:`
-is optional and falls back to sensible defaults; `--dry-run`, `--no-pr`,
-`--concurrency`, `--model`, and `--work-dir` can override the file at runtime.
+Everything under `settings:` is optional and falls back to the defaults shown
+below; `--dry-run`, `--no-pr`, `--concurrency`, `--model`, and `--work-dir`
+override the file at runtime. Unknown keys under `settings:` are rejected.
 
-Each entry under `repos:` is `owner/name`, a full URL, or `owner/*` to expand
-(via `gh repo list`, excluding forks and archived repos) into every repo that
-owner has.
+```yaml
+repos:
+  - allistera/Cookie-Web                        # owner/name
+  - https://github.com/allistera/monzo-mcp.git  # or a full URL
+  - allistera/*                                 # or every repo an owner has
 
-Key knobs: `concurrency`, `work_branch`, `base_branch`, `open_pr`, `dry_run`,
-`max_turns`, and `max_budget_usd` (a per-worker spend ceiling, default $2).
+settings:
+  concurrency: 3                        # workers running in parallel
+  work_dir: work_repos                  # where repos are cloned
+  model: null                           # null = the Claude Code CLI default
+  base_branch: null                     # null = each repo's default branch
+  work_branch: chore/dependency-updates # branch each worker commits to
+  open_pr: true                         # false = commit locally, no push or PR
+  dry_run: false                        # true = analyse and report only
+  max_turns: 60                         # per-worker turn cap
+  max_budget_usd: 2.0                   # per-worker spend cap; null disables it
+  reuse_clones: true                    # fetch an existing clone, don't re-clone
+```
+
+An `owner/*` entry expands (via `gh repo list`, excluding forks and archived
+repos) into every repo that owner has. Repos listed twice are processed once.
+
+A relative `work_dir` is resolved under the system temp directory, not the
+current directory, so clones land in e.g. `$TMPDIR/work_repos/<owner>__<name>`.
+Pass an absolute path to put them somewhere else.
+
+### Telemetry
+
+`.env` is loaded automatically at startup and its variables are inherited by
+every worker's `claude` subprocess. Copy [`.env.example`](./.env.example) to
+`.env` to export Claude Code's OpenTelemetry logs and metrics to an OTLP
+collector. Each worker appends `repo=<repo>` to `OTEL_RESOURCE_ATTRIBUTES`, so
+concurrent workers can be told apart in the backend.
 
 ## Output
 
@@ -112,6 +159,9 @@ lists each repo's status, cost, what was updated, which alerts were fixed, and
 any pull-request URLs. Example (dry run):
 
 ```
+========================================================================
+SUMMARY
+========================================================================
 allistera/monzo-mcp                           success   $  0.94     82s
     dependencies_updated: Would update 2: typescript-eslint 8.63→8.64, typescript 6.0.3→7.0.2 (major)
     dependabot_alerts_fixed: 0
@@ -119,7 +169,11 @@ allistera/monzo-mcp                           success   $  0.94     82s
 ------------------------------------------------------------------------
 1 repo(s): success=1
 total cost: $0.94
+========================================================================
 ```
+
+A repo's status is the one its worker reports (`success`, `partial`, `skipped`,
+or `failed`), or `error` when the clone or the agent session itself failed.
 
 ## Running on Progenitor
 
@@ -137,7 +191,8 @@ Register the repository with the platform's GitHub App using
 (authenticates `gh` for cloning, Dependabot alerts, and PRs; needs the
 `repo` + `security_events` scopes).
 
-Run input (`input.json`) mirrors config.yaml:
+Run input (`input.json`) mirrors config.yaml: `repos` is required and accepts
+the same entries (including `owner/*`), `settings` is optional:
 
 ```json
 {"repos": ["allistera/Cookie-Web"], "settings": {"dry_run": true}}
@@ -149,13 +204,27 @@ Run output (`output.json`):
 {"repos": [...], "succeeded": 1, "failed": 0, "total_cost_usd": 0.94, "pull_requests": []}
 ```
 
+Each `repos` entry carries that repo's `status`, `cost_usd`, `num_turns`,
+`duration_s`, `pr_url`, parsed `report`, and `error`. The run exits non-zero
+only when the input is invalid, a required tool is missing, or every repo
+fails; a partial failure still exits 0 and is visible in `failed`.
+
 The manifest declares three steps — `prepare` (parse input, check tools),
 `update` (the worker pool), `report` (write output) — which the entrypoint
 reports via `::agent-event::` lines.
 
+## Development
+
+```bash
+uv sync               # installs the dev group (ruff, pytest) too
+uv run ruff check .   # lint
+uv run pytest         # tests
+```
+
 ## Safety
 
-- Workers only ever operate inside their own clone under `work_dir/`.
+- Workers are told to stay inside their own clone under `work_dir`, but they
+  run with `bypassPermissions`, so that is an instruction, not a sandbox.
 - They create a dedicated work branch, never modify the default branch, never
   force-push, and never merge. A PR is the endpoint — you review and merge.
 - `--dry-run` makes zero changes. `max_budget_usd` and `max_turns` bound each
